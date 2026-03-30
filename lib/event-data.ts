@@ -1,3 +1,10 @@
+export type Offer = {
+  id: string;
+  section: string;
+  row: string;
+  price: number;
+};
+
 export const event = {
   slug: "fifa-world-cup-2026-usa-vs-england-gillette-stadium-tickets",
   name: "FIFA World Cup 2026 Quarterfinal — USA vs England",
@@ -19,5 +26,5 @@ export const event = {
     { id: "1", section: "130", row: "12", price: 325 },
     { id: "2", section: "205", row: "18", price: 275 },
     { id: "3", section: "VIP", row: "Field", price: 950 },
-  ],
+  ] satisfies Offer[],
 };

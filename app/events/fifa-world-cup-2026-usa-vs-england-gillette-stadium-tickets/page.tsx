@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LiveOffers } from "@/components/live-offers";
 import { event } from "@/lib/event-data";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -87,16 +88,7 @@ export default function EventPage() {
           <p>Tickets from ${event.minPrice}</p>
         </header>
 
-        <section aria-labelledby="tickets-heading">
-          <h2 id="tickets-heading">Available Tickets</h2>
-          <ul>
-            {event.offers.map((offer) => (
-              <li key={offer.id}>
-                Section {offer.section} · Row {offer.row} · ${offer.price}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <LiveOffers initialOffers={event.offers} />
 
         <section aria-labelledby="about-heading">
           <h2 id="about-heading">About this event</h2>
