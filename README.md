@@ -7,6 +7,14 @@ The goal is to ensure that when a fan searches for an event (e.g. *“USA vs Eng
 - loads quickly, even on mobile  
 - clearly communicates event and ticket data to Google  
 
+## Live Demo
+
+View the deployed event page:
+
+[USA vs England Tickets – Event Page](https://gametime-event-page-p0ybuorus-bray22s-projects.vercel.app/events/fifa-world-cup-2026-usa-vs-england-gillette-stadium-tickets)
+
+http://localhost:3000/events/fifa-world-cup-2026-usa-vs-england-gillette-stadium-tickets#tickets-heading
+
 ---
 
 ## Rendering Strategy

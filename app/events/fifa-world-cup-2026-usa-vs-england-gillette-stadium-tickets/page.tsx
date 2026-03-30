@@ -164,7 +164,7 @@ export default function EventPage() {
               alt=""
               className="h-full w-full object-cover object-center opacity-35"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/40 to-white/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/60 via-white/30 to-white/10" />
           </div>
 
           {/* Content */}
