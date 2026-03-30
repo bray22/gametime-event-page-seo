@@ -3,221 +3,176 @@
 import { useEffect, useMemo, useState } from "react";
 
 type Offer = {
-  id: string;
+  id?: string;
   section: string;
   row: string;
   price: number;
+  quantity?: number;
+  notes?: string;
 };
 
 type LiveOffersProps = {
   initialOffers: Offer[];
 };
 
-function getDealLabel(price: number, lowestPrice: number) {
-  if (price === lowestPrice) {
-    return {
-      label: "Best price",
-      className:
-        "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-    };
-  }
-
-  if (price <= lowestPrice + 40) {
-    return {
-      label: "Great value",
-      className: "border-sky-400/20 bg-sky-400/10 text-sky-300",
-    };
-  }
-
-  if (price >= lowestPrice + 300) {
-    return {
-      label: "Premium",
-      className: "border-amber-400/20 bg-amber-400/10 text-amber-300",
-    };
-  }
-
-  return {
-    label: "Popular",
-    className: "border-white/10 bg-white/5 text-neutral-300",
-  };
-}
-
-function getRowLabel(row: string) {
-  const normalized = row.toLowerCase();
-
-  if (normalized.includes("field")) return "Pitchside feel";
-  if (normalized.includes("1") || normalized.includes("2") || normalized.includes("3")) {
-    return "Closer view";
-  }
-
-  return "Good sightline";
+function formatTime(date: Date) {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function LiveOffers({ initialOffers }: LiveOffersProps) {
   const [offers, setOffers] = useState<Offer[]>(initialOffers);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    let isMounted = true;
 
-  useEffect(() => {
-    if (!isMounted) return;
-
-    let cancelled = false;
-
-    const loadOffers = async () => {
+    async function refreshOffers() {
       try {
-        const response = await fetch("/api/inventory", {
+        setIsRefreshing(true);
+
+        const res = await fetch("/api/inventory", {
+          method: "GET",
           cache: "no-store",
         });
 
-        if (!response.ok) return;
+        if (!res.ok) return;
 
-        const data = await response.json();
+        const data = await res.json();
 
-        if (!cancelled) {
-          setOffers(data.offers);
-          setUpdatedAt(data.updatedAt);
+        if (!isMounted) return;
+
+        if (Array.isArray(data?.offers)) {
+          const sorted = [...data.offers].sort(
+            (a: Offer, b: Offer) => a.price - b.price
+          );
+          setOffers(sorted);
+          setUpdatedAt(new Date());
         }
-      } catch {
-        // ignore demo errors
+      } finally {
+        if (isMounted) setIsRefreshing(false);
       }
-    };
+    }
 
-    const timeout = setTimeout(loadOffers, 150);
-    const interval = setInterval(loadOffers, 30000);
+    const timeout = setTimeout(refreshOffers, 1500);
+    const interval = setInterval(refreshOffers, 30000);
 
     return () => {
-      cancelled = true;
+      isMounted = false;
       clearTimeout(timeout);
       clearInterval(interval);
     };
-  }, [isMounted]);
+  }, []);
 
-  const sortedOffers = useMemo(
-    () => [...offers].sort((a, b) => a.price - b.price),
+  const lowestPrice = useMemo(
+    () =>
+      offers.reduce(
+        (min, o) => Math.min(min, o.price),
+        offers[0]?.price ?? 0
+      ),
     [offers]
   );
 
-  const lowestPrice = Math.min(...sortedOffers.map((offer) => offer.price));
-  const totalListings = sortedOffers.length;
-
   return (
-    <section aria-labelledby="tickets-heading" className="space-y-5">
-      <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-black/20 p-5 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              Live inventory
-            </span>
+    <section className="space-y-6">
+      {/* Header */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                ● Live inventory
+              </span>
+              <span className="text-xs text-neutral-500">
+                {offers.length} listings
+              </span>
+              {isRefreshing && (
+                <span className="text-xs text-neutral-400">
+                  Updating…
+                </span>
+              )}
+            </div>
 
-            <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-neutral-300">
-              {totalListings} listings
-            </span>
-          </div>
-
-          <div>
             <h2
               id="tickets-heading"
-              className="text-2xl font-semibold tracking-tight text-white"
+              className="text-xl font-semibold text-neutral-900"
             >
               Available Tickets
             </h2>
-            <p className="mt-1 text-sm text-neutral-400">
-              Lowest available price is{" "}
-              <span className="font-medium text-white">${lowestPrice}</span> right now.
+
+            <p className="text-sm text-neutral-600">
+              Prices start at{" "}
+              <span className="font-semibold text-neutral-900">
+                ${lowestPrice}
+              </span>
             </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3 md:min-w-[260px]">
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-              Lowest
-            </p>
-            <p className="mt-1 text-lg font-semibold text-white">${lowestPrice}</p>
-          </div>
+          <div className="flex gap-3">
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2">
+              <div className="text-xs text-neutral-500">Lowest</div>
+              <div className="text-lg font-semibold">
+                ${lowestPrice}
+              </div>
+            </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <p className="text-[11px] uppercase tracking-[0.18em] text-neutral-500">
-              Updated
-            </p>
-            <p className="mt-1 text-sm font-medium text-white">
-              {updatedAt ? (
-                <time dateTime={updatedAt}>
-                  {new Date(updatedAt).toLocaleTimeString([], {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </time>
-              ) : (
-                "Just now"
-              )}
-            </p>
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2">
+              <div className="text-xs text-neutral-500">Updated</div>
+              <div className="text-sm font-medium">
+                {formatTime(updatedAt)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <ul className="space-y-3">
-        {sortedOffers.map((offer, index) => {
-          const deal = getDealLabel(offer.price, lowestPrice);
-          const isBest = index === 0;
+      {/* Ticket list */}
+      <ul className="divide-y rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        {offers.map((offer, index) => {
+          const isBest = offer.price === lowestPrice;
 
           return (
-            <li key={offer.id}>
-              <article
-                className={`group rounded-3xl border px-5 py-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/[0.07] hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)] ${
-                  isBest
-                    ? "border-emerald-400/20 bg-emerald-400/[0.06]"
-                    : "border-white/10 bg-black/20"
-                }`}
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${deal.className}`}
-                      >
-                        {deal.label}
-                      </span>
+            <li
+              key={offer.id ?? `${offer.section}-${index}`}
+              className="group flex items-center justify-between gap-4 px-5 py-4 transition hover:bg-neutral-50"
+            >
+              {/* Left */}
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  {isBest && (
+                    <span className="text-xs font-medium text-emerald-600">
+                      Best price
+                    </span>
+                  )}
+                  <span className="text-xs text-neutral-400">
+                    Section {offer.section}
+                  </span>
+                </div>
 
-                      <span className="inline-flex rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-neutral-300">
-                        {getRowLabel(offer.row)}
-                      </span>
-                    </div>
+                <div className="text-sm text-neutral-600">
+                  Row {offer.row}
+                  {offer.quantity && ` • ${offer.quantity} tickets`}
+                </div>
+              </div>
 
-                    <div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <h3 className="text-lg font-semibold text-white md:text-xl">
-                          Section {offer.section}
-                        </h3>
-                        <span className="text-sm text-neutral-500">•</span>
-                        <p className="text-sm text-neutral-300">Row {offer.row}</p>
-                      </div>
-
-                      <p className="mt-1 text-sm text-neutral-400">
-                        Clear view of the match with secure mobile ticket delivery.
-                      </p>
-                    </div>
+              {/* Right */}
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <div className="text-xl font-semibold text-neutral-900">
+                    ${offer.price}
                   </div>
-
-                  <div className="flex items-end justify-between gap-4 md:block md:min-w-[150px] md:text-right">
-                    <div>
-                      <p className="text-2xl font-semibold tracking-tight text-white">
-                        ${offer.price}
-                      </p>
-                      <p className="text-xs text-neutral-500">per ticket</p>
-                    </div>
-
-                    <button className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:border-white/20 hover:bg-white/10 group-hover:bg-white group-hover:text-black">
-                      Select
-                    </button>
+                  <div className="text-xs text-neutral-500">
+                    per ticket
                   </div>
                 </div>
-              </article>
+
+                <button className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800">
+                  View
+                </button>
+              </div>
             </li>
           );
         })}
