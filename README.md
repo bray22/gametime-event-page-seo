@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Gametime Event Page – SEO & Crawlability
 
-## Getting Started
+This project implements a crawlable, performant event page designed to compete for organic search traffic against marketplaces like StubHub, SeatGeek, and Ticketmaster.
 
-First, run the development server:
+The goal is to ensure that when a fan searches for an event (e.g. “USA vs England tickets June 15”), the page:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+is discoverable and indexable by search engines
+loads quickly, even on mobile
+clearly communicates event and ticket data to Google
+### Rendering Strategy
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+I chose a hybrid ISR (Incremental Static Regeneration) + client hydration approach using Next.js App Router.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Why this approach
+Server-rendered HTML ensures fast initial load and crawlability
+ISR keeps content reasonably fresh without sacrificing performance
+Client-side hydration enables near real-time ticket updates after load
+Implementation
+The page uses export const revalidate = 60
+The page is regenerated every 60 seconds
+Users and crawlers receive fast, cacheable HTML
+### What Googlebot Sees
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A crawler requesting this page receives fully rendered HTML without needing JavaScript.
 
-## Learn More
+The initial HTML includes:
 
-To learn more about Next.js, take a look at the following resources:
+<h1> event title
+Event description
+<time> element with ISO datetime
+<address> element with venue and location
+Server-rendered ticket listings (price, section, row)
+Breadcrumb navigation
+JSON-LD structured data (SportsEvent, Offer, BreadcrumbList)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This ensures:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+proper indexing
+strong keyword relevance
+eligibility for rich results
+### Structured Data (JSON-LD)
 
-## Deploy on Vercel
+The page includes schema.org structured data using:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+SportsEvent
+Offer
+Place
+PostalAddress
+BreadcrumbList
+Signals sent to Google
+Event name, date, and location
+Performers (teams)
+Ticket availability and pricing
+Canonical event URL
+Page hierarchy via breadcrumbs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This helps Google understand that the page represents a ticketed event and improves ranking and rich result eligibility.
+
+### Semantic HTML
+
+The page uses semantic, crawler-friendly HTML:
+
+main, article, section, nav
+h1, h2
+time (machine-readable date)
+address (structured location)
+ul / li (ticket listings)
+
+This allows search engines to understand the content without executing JavaScript.
+
+### Handling Live Inventory (Fast + Fresh)
+
+Ticket inventory changes frequently, so the page uses a two-layer approach:
+
+1. Server-rendered snapshot
+Ticket listings are included in the initial HTML
+Ensures fast load and crawlability
+2. Client-side refresh
+After hydration, the page fetches updated inventory from /api/inventory
+Keeps prices fresh without blocking initial render
+Why this works
+Users see content immediately
+Crawlers receive complete data
+Inventory stays reasonably up to date
+### Tradeoffs
+
+Chosen approach: ISR + client refresh
+
+Pros
+Fast initial load
+Fully crawlable HTML
+Good balance of freshness and performance
+Simple and reliable architecture
+Cons
+Inventory may be up to ~60 seconds stale in server HTML
+Requires client-side fetch for real-time updates
+### What I’d Do With More Time
+Integrate real backend inventory data
+Improve structured data accuracy (availability, quantity, pricing updates)
+Add internal linking (teams, venues, leagues)
+Implement edge caching / CDN optimization
+Expand SEO surface area (team pages, matchup pages, date listings)
+Optimize Core Web Vitals (especially LCP)
+### Tech Stack
+Next.js (App Router)
+React
+TypeScript
+### Summary
+
+This implementation focuses on:
+
+Crawlability first (server-rendered HTML + structured data)
+Performance (ISR + fast initial render)
+Freshness (client-side inventory updates)
+
+It reflects how I would approach building SEO-critical event pages on the Gametime web team while balancing performance and real-time data constraints.
